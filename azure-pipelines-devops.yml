@@ -1,31 +1,18 @@
 # Grab variables from the specific variable group
 variables:
-- group: 'Nutter Testing'
+- group: 'Nutter Testing on DevOps'
 
 trigger:
   batch: true
   branches:
     include:
     - '*'
-  paths:
-    exclude:
-      - README.md
-      - images
-#  tags:
-#    include:
-#      - v*.*
-#      - prod
 
-pr:
-  branches:
+  tags:
     include:
-      - master
-      - releases
-  paths:
-    exclude:
-      - README.md
-      - images
-      
+      - v*.*
+      - prod
+
 stages:
 - stage: onPush
   condition: |
@@ -53,8 +40,26 @@ stages:
       displayName: 'Checkout & Build.Reason: $(Build.Reason) & Build.SourceBranchName: $(Build.SourceBranchName)'
 
     - script: |
-        python -m pip install --upgrade pip nutter
+        python -m pip install --upgrade pip nutter adal
       displayName: 'Install dependencies'
+
+    - task: PythonScript@0
+      inputs:
+       scriptSource: 'inline'
+       arguments: '$(client_id) $(client_secret) $(tenant_id)'
+       script: |
+        from adal import AuthenticationContext
+        import sys
+        import requests
+        resource_id = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+        client_id = sys.argv[1]
+        client_secret = sys.argv[2]
+        tenant_id = sys.argv[3]
+        authority_url = f"https://login.microsoftonline.com/{tenant_id}"
+        auth_context = AuthenticationContext(authority_url)
+        token_response = auth_context.acquire_token_with_client_credentials(resource_id, client_id, client_secret)
+        access_token = token_response['accessToken']
+        print('##vso[task.setvariable variable=AccessToken;]%s' % (access_token))
 
 # https://docs.databricks.com/dev-tools/api/latest/repos.html
     - script: |
@@ -69,14 +74,14 @@ stages:
         grep -v error_code "/tmp/$(Build.SourceBranchName)-out.json"
       env:
         DATABRICKS_HOST: $(DATABRICKS_HOST)
-        DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+        DATABRICKS_TOKEN: $(AccessToken)
       displayName: 'Update Staging project'
 
     - script: |
         nutter run '/Repos/Staging/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
       env:
         DATABRICKS_HOST: $(DATABRICKS_HOST)
-        DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+        DATABRICKS_TOKEN: $(AccessToken)
       displayName: 'Execute Nutter tests'
 
     - task: PublishTestResults@2
@@ -108,8 +113,26 @@ stages:
         displayName: 'Checkout & Build.Reason: $(Build.Reason) & Build.SourceBranchName: $(Build.SourceBranchName)'
 
       - script: |
-          python -m pip install --upgrade pip nutter
+          python -m pip install --upgrade pip nutter adal
         displayName: 'Install dependencies'
+
+      - task: PythonScript@0
+        inputs:
+         scriptSource: 'inline'
+         arguments: '$(client_id) $(client_secret) $(tenant_id)'
+         script: |
+          from adal import AuthenticationContext
+          import sys
+          import requests
+          resource_id = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+          client_id = sys.argv[1]
+          client_secret = sys.argv[2]
+          tenant_id = sys.argv[3]
+          authority_url = f"https://login.microsoftonline.com/{tenant_id}"
+          auth_context = AuthenticationContext(authority_url)
+          token_response = auth_context.acquire_token_with_client_credentials(resource_id, client_id, client_secret)
+          access_token = token_response['accessToken']
+          print('##vso[task.setvariable variable=AccessToken;]%s' % (access_token))
 
       - script: |
           set -x
@@ -123,7 +146,7 @@ stages:
           grep -v error_code "/tmp/releases-out.json"
         env:
           DATABRICKS_HOST: $(DATABRICKS_HOST)
-          DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+          DATABRICKS_TOKEN: $(AccessToken)
         displayName: 'Update Staging repository'
 
 # We can do a separate set of the tests for release branches
@@ -131,7 +154,7 @@ stages:
           nutter run '/Repos/Staging/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
         env:
           DATABRICKS_HOST: $(DATABRICKS_HOST)
-          DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+          DATABRICKS_TOKEN: $(AccessToken)
         displayName: 'Execute Nutter tests on release'
 
       - task: PublishTestResults@2

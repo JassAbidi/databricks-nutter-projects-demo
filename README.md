@@ -37,26 +37,28 @@ Your Databricks workspace needs to have Repos functionality enabled.  If it's en
 
   * Link it to the Git repository, similarly how you did it for your personal checkout
   * Create the "Production" folder with repository inside, repeating two previous steps
-  * 
 * Create a new cluster that will be used for execution of the tests, you will need to pass the [cluster ID](https://docs.databricks.com/workspace/workspace-details.html#cluster-url-and-id) to the Nutter to execute the tests
-* Create a [personal access token (PAT)](https://docs.databricks.com/administration-guide/access-control/tokens.html) that will be used for execution of the tests & updating the repository
 
 
-# Setup Azure DevOps
+# Setup Azure DevOps pipelines
 
 The Azure DevOps setup consists of the several steps, described in the next sections.  It's assumed that project in Azure DevOps already exists.
 
-## Create variables group to keep common configuration
+We need to create a [personal access token (PAT)](https://docs.databricks.com/administration-guide/access-control/tokens.html) that will be used for execution of the tests & updating the repository.  This token will be used to authenticate to Databricks workspace, and then it will fetch configured token to authenticate to Git provider.  We also need to connect Databricks workspace to the Git provider - usually it's done by using the provider-specific access tokens - see [documentation](https://docs.databricks.com/repos.html#configure-your-git-integration-with-databricks) on details of setting the integration with specific Git provider (**note, that when repository is on Azure DevOps, you still need to generate Azure DevOps token to make API working**!). 
+
+> :warning: the previous instructions on using Repos + Azure DevOps with service principals weren't correct, so were removed!
+
+### Create variables group to keep common configuration
 
 Because we have several pipelines, the it's makes sense to define [variable group](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/variable-groups) to store the data that are necessary for execution of tests & deployment of the code.  We need following configuration properties for execution of our pipelines:
 
-* `databricks_host` - the [URL of your workspace](https://docs.databricks.com/workspace/workspace-details.html#workspace-instance-names-urls-and-ids) where tests will be executed (host name with `https://`, without `?o=`).
-* `databricks_token` - personal access token for executing commands against the workspace.  Mark this variable as private!
+* `databricks_host` - the [URL of your workspace](https://docs.databricks.com/workspace/workspace-details.html#workspace-instance-names-urls-and-ids) where tests will be executed (host name with `https://`, without `?o=`, and without trailing slash character.  For example: `https://adb-1568830229861029.9.azuredatabricks.net`).
+* `databricks_token` - personal access token for executing commands against the workspace.  Mark this variable as private!  Note that if you're using Azure DevOps to host repository, then you need to use AAD token instead (see instructions below).
 * `cluster_id` - the ID of the cluster where tests will be executed.
 
 The name of the variable group is used in the [azure-pipelines.yml](azure-pipelines.yml). By default its name is "Nutter Testing".  Change the [azure-pipelines.yml](azure-pipelines.yml) if you use another name for variable group.
 
-## Create the build pipeline
+### Create the build pipeline
 
 Azure DevOps can work with GitHub repositories as well - see [documentation](https://docs.microsoft.com/en-us/azure/devops/pipelines/repos/github) for more details on how to link DevOps with GitHub.
 
@@ -66,7 +68,7 @@ Azure DevOps can work with GitHub repositories as well - see [documentation](htt
 * Save pipeline
 
 
-## Create the release pipeline
+### Create the release pipeline
 
 * In the Azure DevOps, in the Pipelines section, select Releases, and click "New release pipeline"
 * Select "Empty Job" in the dialog
@@ -99,4 +101,3 @@ grep -v error_code "/tmp/releases-out.json"
 * Save the pipeline
 
 After all of this done, the release pipeline will be automatically executed on every successful build in the `releases` branch.
-
