@@ -1,6 +1,6 @@
 # Grab variables from the specific variable group
 variables:
-- group: 'Nutter Testing'
+- group: 'Databricks-environment'
 
 trigger:
   batch: true
@@ -60,7 +60,7 @@ stages:
     - script: |
         set -x
         echo "Checking out the $(Build.SourceBranchName) branch"
-        curl -s -n -X GET -o /tmp/staging-repo-info.json "$DATABRICKS_HOST/api/2.0/workspace/get-status" -H "Authorization: Bearer $DATABRICKS_TOKEN" -d '{"path":"/Repos/Staging/databricks-nutter-projects-demo"}'
+        curl -s -n -X GET -o /tmp/staging-repo-info.json "$DATABRICKS_HOST/api/2.0/workspace/get-status" -H "Authorization: Bearer $DATABRICKS_TOKEN" -d '{"path":"/Repos/jasser.abidi@databricks.com/databricks-nutter-projects-demo"}'
         cat /tmp/staging-repo-info.json
         export STAGING_REPOS_ID=$(cat /tmp/staging-repo-info.json|grep '"object_type":"REPO"'|sed -e 's|^.*"object_id":\([0-9]*\).*$|\1|')
         curl -s -n -X PATCH -o "/tmp/$(Build.SourceBranchName)-out.json" "$DATABRICKS_HOST/api/2.0/repos/$STAGING_REPOS_ID" \
@@ -73,7 +73,7 @@ stages:
       displayName: 'Update Staging project'
 
     - script: |
-        nutter run '/Repos/Staging/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
+        nutter run '/Repos/jasser.abidi@databricks.com/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
       env:
         DATABRICKS_HOST: $(DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
@@ -128,7 +128,7 @@ stages:
 
 # We can do a separate set of the tests for release branches
       - script: |
-          nutter run '/Repos/Staging/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
+          nutter run '/Repos/jasser.abidi@databricks.com/databricks-nutter-projects-demo/' --cluster_id $(CLUSTER_ID) --recursive --junit_report --timeout 500
         env:
           DATABRICKS_HOST: $(DATABRICKS_HOST)
           DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
@@ -139,4 +139,5 @@ stages:
           testResultsFormat: 'JUnit'
           testResultsFiles: '**/test-*.xml' 
           failTaskOnFailedTests: true
+
 
