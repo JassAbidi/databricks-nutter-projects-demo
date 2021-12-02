@@ -45,3 +45,7 @@ print(result.to_string())
 is_job = dbutils.notebook.entry_point.getDbutils().notebook().getContext().currentRunId().isDefined()
 if is_job:
   result.exit(dbutils)
+
+# COMMAND ----------
+
+# add a new cell
